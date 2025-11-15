@@ -173,15 +173,30 @@ router.delete('/parents/:id', async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: 'Parent not found',
+        message: 'Lapsevanem ei leitud',
       });
     }
 
-    // Check if parent has students
+    // Check if parent has students in the students array
     if (parent.students && parent.students.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete parent with associated students',
+        message: 'Ei saa kustutada - lapsevanemaga on seotud õpilasi. Kustuta esmalt õpilased.',
+      });
+    }
+
+    // Also check if any students reference this parent by email or ID
+    const studentsWithThisParent = await Student.find({
+      $or: [
+        { parent: req.params.id },
+        { parentEmail: parent.email }
+      ]
+    });
+
+    if (studentsWithThisParent.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Ei saa kustutada - lapsevanemaga on seotud ${studentsWithThisParent.length} õpilast. Kustuta esmalt õpilased.`,
       });
     }
 
@@ -189,7 +204,7 @@ router.delete('/parents/:id', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Parent deleted successfully',
+      message: 'Lapsevanem kustutatud edukalt',
     });
   } catch (error) {
     res.status(500).json({
