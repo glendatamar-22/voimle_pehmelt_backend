@@ -24,10 +24,34 @@ const PORT = process.env.PORT || 5001;
 // CORS configuration for Võimle Pehmelt
 const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5174';
 
+// Remove trailing slash if present for CORS matching
+const normalizedOrigin = frontendOrigin.endsWith('/') 
+  ? frontendOrigin.slice(0, -1) 
+  : frontendOrigin;
+
 const corsOptions = {
-    origin: frontendOrigin,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Normalize the incoming origin (remove trailing slash)
+        const normalizedIncoming = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+        
+        // Check if normalized origins match
+        if (normalizedIncoming === normalizedOrigin || 
+            origin === 'http://localhost:5174' || 
+            origin === 'http://localhost:5173') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 
 // Middleware
